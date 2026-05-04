@@ -1,6 +1,6 @@
 from jetson_containers import CUDA_VERSION
 from packaging.version import Version
-from ..pytorch.version import PYTORCH_VERSION
+from packages.ml.pytorch.version import PYTORCH_VERSION
 from jetson_containers import update_dependencies
 
 
@@ -37,12 +37,5 @@ def xformers(version, requires=None, pytorch=None, default=True):
 
 
 package = [
-    xformers('0.0.26', pytorch='2.1', requires='<=cu122'),
-    xformers('0.0.29', pytorch='2.4', requires='<cu126'),  # support pytorch 2.5.1
-    xformers('0.0.30', pytorch='2.7', default=(CUDA_VERSION < Version('12.6'))),
-    # support pytorch 2.6.0
-    xformers('0.0.32.post2', pytorch='2.8', default=(CUDA_VERSION >= Version('12.6'))),
-    # support pytorch 2.8.0
-    xformers('0.0.34', default=(CUDA_VERSION >= Version('12.6'))),
-    # Support Blackwell and pytorch 2.9.0
+    xformers('0.0.36', default=(CUDA_VERSION >= Version('12.6'))),
 ]

@@ -3,17 +3,16 @@
 # alias: [nvcodec, nvenc, nvcuvid, cuvid]
 # group: multimedia
 # depends: [cuda]
-# notes: NVIDIA Video Codec SDK with NVENC and NVCUVID
+# buildkit_device: nvidia.com/gpu=all
+# notes: NVIDIA Video Codec SDK headers from https://github.com/FFmpeg/nv-codec-headers
 # test: test.sh
 #---
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
 ARG NV_CODEC_VERSION \
-    BUILD_SAMPLES=off \
-    SOURCE=/opt/nvidia/video-codec-sdk \
-		TMP=/tmp/video-codec-sdk
+    NV_CODEC_HEADERS_TAG
 
-COPY build.sh install.sh *.zip $TMP/
+COPY install.sh /tmp/video-codec-sdk/
 
-RUN $TMP/build.sh || $TMP/install.sh
+RUN /tmp/video-codec-sdk/install.sh

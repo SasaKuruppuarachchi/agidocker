@@ -3,6 +3,7 @@
 # group: llm
 # config: config.py
 # depends: [cuda, cudastack:standard, cmake, python, numpy, huggingface_hub, sudonim]
+# buildkit_device: nvidia.com/gpu=all
 # requires: '>=34.1.0'
 # test: test_version.py
 # docs: docs.md
@@ -19,6 +20,9 @@ ARG LLAMA_CPP_VERSION \
     FORCE_BUILD=off \
     SOURCE_DIR=/opt/llama_cpp_python \
     TMP=/tmp/llama_cpp
+
+ENV CUDA_SCALE_LAUNCH_QUEUES=4x \
+    GGML_CUDA_ENABLE_UNIFIED_MEMORY=1
 
 COPY build.sh install.sh $TMP/
 COPY benchmark.py /usr/local/bin/llama_cpp_benchmark.py

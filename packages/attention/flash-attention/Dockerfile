@@ -3,6 +3,7 @@
 # group: attention
 # config: config.py
 # depends: [pytorch, triton, cutlass]
+# buildkit_device: nvidia.com/gpu=all
 # requires: '>=35'
 # test: test.py
 #---
@@ -11,6 +12,7 @@ FROM ${BASE_IMAGE}
 
 ARG FLASH_ATTENTION_VERSION \
     IS_SBSA \
+    CUDA_ARCHITECTURES \
     FORCE_BUILD=off
 
 COPY build.sh install.sh patches /tmp/flash-attention/

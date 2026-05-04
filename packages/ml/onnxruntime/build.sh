@@ -66,7 +66,7 @@ if [[ "${ARCH}" = "aarch64" ]] || [[ "${ARCH}" = "arm64" ]]; then
     echo "Memory-adaptive CUDA build configuration (ARM64):"
     echo "  Total RAM: $total_ram"
     echo "  MAX_JOBS: $MAX_JOBS (auto-detected)"
-    echo "  Expected peak memory: ~$((MAX_JOBS * 6 + 8))GB (${MAX_JOBS} CUDA jobs × 6GB + 8GB overhead)"
+    echo "  Expected peak memory: ~$((MAX_JOBS * 6 + 8))GB (${MAX_JOBS} CUDA jobs x 6GB + 8GB overhead)"
     echo ""
 else
     # x86_64 - use sensible defaults
@@ -81,10 +81,49 @@ uv pip uninstall onnxruntime || echo "onnxruntime was not previously installed"
 git clone https://github.com/microsoft/onnxruntime /opt/onnxruntime
 cd /opt/onnxruntime
 
-git checkout ${ONNXRUNTIME_BRANCH} || echo "Branch ${ONNXRUNTIME_BRANCH} not found, staying on main branch"
+if git checkout ${ONNXRUNTIME_BRANCH}; then
+    echo "Checked out ${ONNXRUNTIME_BRANCH}"
+elif git checkout v${ONNXRUNTIME_VERSION}; then
+    echo "Branch ${ONNXRUNTIME_BRANCH} not found, checked out tag v${ONNXRUNTIME_VERSION}"
+else
+    echo "ERROR: failed to checkout branch ${ONNXRUNTIME_BRANCH} or tag v${ONNXRUNTIME_VERSION}"
+    exit 1
+fi
 git submodule update --init --recursive
 
 install_dir="/opt/onnxruntime/install"
+
+# Patch CCCL bug in device_transform.cuh (CUDA 13.2)
+# Template specialization of cuda::proclaims_copyable_arguments uses qualified name
+# at global scope which GCC rejects. Wrap in namespace cuda {} instead.
+# uname -m returns aarch64 even on SBSA, but CUDA headers live under targets/sbsa-linux/
+for CCCL_HEADER in \
+    /usr/local/cuda/targets/sbsa-linux/include/cccl/cub/device/device_transform.cuh \
+    /usr/local/cuda/targets/aarch64-linux/include/cccl/cub/device/device_transform.cuh \
+    /usr/local/cuda/include/cccl/cub/device/device_transform.cuh; do
+    if [ -f "$CCCL_HEADER" ] && grep -q 'struct ::cuda::proclaims_copyable_arguments' "$CCCL_HEADER"; then
+        echo "Patching CCCL device_transform.cuh: $CCCL_HEADER"
+        python3 -c "
+p = '$CCCL_HEADER'
+with open(p) as f:
+    src = f.read()
+old = '''template <class T>
+struct ::cuda::proclaims_copyable_arguments<CUB_NS_QUALIFIER::detail::__return_constant<T>> : ::cuda::std::true_type
+{};'''
+new = '''namespace cuda {
+template <class T>
+struct proclaims_copyable_arguments<CUB_NS_QUALIFIER::detail::__return_constant<T>> : ::cuda::std::true_type
+{};
+} // namespace cuda'''
+if old in src:
+    with open(p, 'w') as f:
+        f.write(src.replace(old, new))
+    print('Patched successfully')
+else:
+    print('Exact pattern not found, skipping')
+"
+    fi
+done
 
 ./build.sh --config Release --update --parallel --build --build_wheel --build_shared_lib \
         --skip_tests --skip_submodule_sync ${ONNXRUNTIME_FLAGS} \

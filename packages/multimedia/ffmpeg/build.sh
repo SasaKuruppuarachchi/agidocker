@@ -73,7 +73,7 @@ pkg-config --modversion aom
 pkg-config --modversion SvtAv1Enc
 
 # nv-codec-headers
-git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
+git clone https://github.com/FFmpeg/nv-codec-headers.git
 cd nv-codec-headers && make PREFIX="$DIST" install
 
 export PATH=/usr/local/cuda/bin:${PATH}
@@ -134,4 +134,10 @@ tarpack upload "ffmpeg-${FFMPEG_VERSION}" "${DIST_ABS}" || echo "failed to uploa
 
 # Optionally install into /usr/local for runtime
 cp -r "${DIST_ABS}/"* /usr/local/
+
+# Fix pkg-config files to use /usr/local instead of /opt/ffmpeg/dist
+if [ -d /usr/local/lib/pkgconfig ]; then
+  sed -i "s|${DIST_ABS}|/usr/local|g" /usr/local/lib/pkgconfig/*.pc 2>/dev/null || true
+fi
+
 ldconfig

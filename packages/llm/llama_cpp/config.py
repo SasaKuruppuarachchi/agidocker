@@ -1,4 +1,12 @@
-GGUF_FLAGS="-DGGML_CUDA=on -DGGML_CUDA_F16=on -DLLAMA_CURL=on -DGGML_CUDA_FA_ALL_QUANTS=ON"
+GGUF_FLAGS=" ".join([
+    "-DGGML_CUDA=ON",
+    "-DGGML_NATIVE=OFF",
+    "-DGGML_CUDA_F16=ON",
+    "-DLLAMA_CURL=ON",
+    "-DLLAMA_OPENSSL=ON",
+    "-DGGML_CUDA_FA_ALL_QUANTS=ON",
+    "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=512",
+])
 GGML_FLAGS="-DLLAMA_CUBLAS=on -DLLAMA_CUDA_F16=1"
 from jetson_containers import CUDA_ARCHITECTURES
 
@@ -14,7 +22,7 @@ def llama_cpp(version, default=False, flags=GGUF_FLAGS):
 
     pkg['build_args'] = {
         'LLAMA_CPP_VERSION': version[1:] if cpp else None,
-        'LLAMA_CPP_VERSION_PY': '0.3.16' if cpp else version,
+        'LLAMA_CPP_VERSION_PY': '0.3.22' if cpp else version,
         'LLAMA_CPP_BRANCH': version if cpp else None,
         'LLAMA_CPP_BRANCH_PY': 'main' if cpp else f'v{version}',
         'LLAMA_CPP_FLAGS': flags,
@@ -43,19 +51,7 @@ def llama_cpp(version, default=False, flags=GGUF_FLAGS):
 package = [
     llama_cpp('0.2.57', flags=GGML_FLAGS),
     llama_cpp('0.2.70', flags=GGML_FLAGS),
-    llama_cpp('0.2.83'),
-    llama_cpp('0.2.90'),
-    llama_cpp('0.3.1'),
-    llama_cpp('0.3.2'),
-    llama_cpp('0.3.5'),
-    llama_cpp('0.3.6'),
-    llama_cpp('0.3.7'),
-    llama_cpp('0.3.8'),
-    llama_cpp('0.3.9'),
-    llama_cpp('0.4.0'),
-
     # llama_cpp_python appears abandoned (4/25)
     # so we changed over to llama.cpp branches
-    llama_cpp('b5255'),
-    llama_cpp('b172', default=True)
+    llama_cpp('b9016', default=True)
 ]

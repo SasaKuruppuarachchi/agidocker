@@ -2,7 +2,8 @@
 # name: nixl
 # group: dynamo
 # config: config.py
-# depends: [cuda, rust, cmake, ninja, gdrcopy, pytorch, torchvision, torchaudio, torchao, transformers, triton, mooncake, go]
+# depends: [cuda, rust, cmake, ninja, cudastack, pytorch, torchvision, torchaudio, torchao, transformers, triton, mooncake, go]
+# buildkit_device: nvidia.com/gpu=all
 # requires: '>=34.1.0'
 # test: test.py
 # notes: https://github.com/ai-dynamo/nixl

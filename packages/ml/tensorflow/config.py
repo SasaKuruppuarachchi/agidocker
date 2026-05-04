@@ -1,8 +1,8 @@
 from jetson_containers import L4T_VERSION, PYTHON_VERSION, CUDA_VERSION, IS_SBSA
 from packaging.version import Version
 
-from ..ml.tensorflow.version import TENSORFLOW_VERSION
-from ..cuda.cudastack.config import CUDNN_VERSION
+from packages.ml.tensorflow.version import TENSORFLOW_VERSION
+from packages.cuda.cudastack.config import CUDNN_VERSION
 
 
 def tensorflow(version, tensorflow_version='tf2', requires=None, default=False):
@@ -113,37 +113,6 @@ package = [
         tensorflow_version='tf1',
         default=(L4T_VERSION.major <= 35),
         requires='<36'
-    ),
-    *tensorflow(
-        version='2.7.0',
-        tensorflow_version='tf2',
-        default=(L4T_VERSION.major == 32),
-        requires='<35'
-    ),
-    # TensorFlow tf2 para L4T >=36
-    *tensorflow(
-        version='2.16.1',
-        tensorflow_version='tf2',
-        requires='>=36',
-        default=False,
-    ),
-    *tensorflow(
-        version='2.18.0',
-        tensorflow_version='tf2',
-        requires='>=36',
-        default=False,
-    ),
-*tensorflow(
-        version='2.19.0',
-        tensorflow_version='tf2',
-        requires='>=36',
-        default=False,
-    ),
-*tensorflow(
-        version='2.20.0',
-        tensorflow_version='tf2',
-        requires='>=36',
-        default=False,
     ),
 *tensorflow(
         version='2.21.0',

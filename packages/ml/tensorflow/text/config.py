@@ -1,6 +1,6 @@
 from jetson_containers import update_dependencies, PYTHON_VERSION
 from packaging.version import Version
-from ..ml.tensorflow.version import TENSORFLOW_VERSION
+from packages.ml.tensorflow.version import TENSORFLOW_VERSION
 
 def tensorflow_text(version, tensorflow=None, requires=None):
     pkg = package.copy()
@@ -40,8 +40,5 @@ def tensorflow_text(version, tensorflow=None, requires=None):
 
 package = [
     # JetPack 5/6
-    tensorflow_text('2.18.0', tensorflow='2.18.0', requires='>=36'),
-    tensorflow_text('2.19.0', tensorflow='2.19.0', requires='>=36'),
-    tensorflow_text('2.20.0', tensorflow='2.20.0', requires='>=36'),
     tensorflow_text('2.21.0', tensorflow='2.21.0', requires='>=36'),
 ]

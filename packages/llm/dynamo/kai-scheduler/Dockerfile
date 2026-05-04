@@ -2,7 +2,8 @@
 # name: kai_scheduler
 # group: dynamo
 # config: config.py
-# depends: [cuda, rust, cmake, ninja, helm, llvm:21]
+# depends: [cuda, rust, cmake, ninja, helm, llvm:22]
+# buildkit_device: nvidia.com/gpu=all
 # requires: '>=34.1.0'
 # notes: https://github.com/ai-kai_scheduler/kai_scheduler
 #---

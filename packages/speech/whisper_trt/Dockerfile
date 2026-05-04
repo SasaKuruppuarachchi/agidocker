@@ -2,6 +2,7 @@
 # name: whisper_trt
 # group: audio
 # depends: [pytorch, torch2trt, onnxruntime]
+# buildkit_device: nvidia.com/gpu=all
 # requires: '>=36'
 # test: test.py
 # notes: TensorRT optimized Whisper ASR from https://github.com/NVIDIA-AI-IOT/whisper_trt
@@ -13,14 +14,15 @@ ADD https://api.github.com/repos/NVIDIA-AI-IOT/whisper_trt/git/refs/heads/main /
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-		  ffmpeg \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
 RUN uv pip install openai-whisper && \
     git clone https://github.com/NVIDIA-AI-IOT/whisper_trt /opt/whisper_trt && \
     cd /opt/whisper_trt && \
-    uv pip install -e . && \
+    uv pip install --no-build-isolation -e . && \
+    uv pip install onnxruntime && \
     mkdir -p ~/.cache && \
     ln -s /data/models/whisper ~/.cache/whisper && \
     ln -s /data/models/whisper ~/.cache/whisper_trt

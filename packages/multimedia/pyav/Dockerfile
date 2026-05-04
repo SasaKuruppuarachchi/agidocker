@@ -1,7 +1,8 @@
 #---
 # name: pyav
 # group: multimedia
-# depends: [python, ffmpeg:git]
+# depends: [python, ffmpeg]
+# buildkit_device: nvidia.com/gpu=all
 # test: test.sh
 #---
 ARG BASE_IMAGE

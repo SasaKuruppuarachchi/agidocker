@@ -28,5 +28,5 @@ def gptqmodel(version, branch=None, default=False):
 
 
 package = [
-    gptqmodel('5.4.3', default=True),
+    gptqmodel('7.0.0', default=True),
 ]

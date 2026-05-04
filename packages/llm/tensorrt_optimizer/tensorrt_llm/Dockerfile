@@ -3,6 +3,7 @@
 # group: llm
 # config: config.py
 # depends: [cudastack:standard, pytorch, transformers, cuda-python, nixl]
+# buildkit_device: nvidia.com/gpu=all
 # test: [test.py]
 # requires: '>=35'
 # notes: The `tensorrt-llm:builder` container includes the C++ binaries under `/opt`
@@ -24,6 +25,27 @@ ARG TRT_LLM_VERSION \
     GIT_PATCHES="/tmp/TensorRT-LLM/patch.diff" \
     TMP_DIR="/tmp/TensorRT-LLM/"
 
+WORKDIR ${SOURCE_DIR}
+
+RUN add-apt-repository main && \
+    add-apt-repository universe && \
+    add-apt-repository restricted && \
+    add-apt-repository multiverse && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    openmpi-bin \
+    libopenmpi-dev \
+    git-lfs \
+    ccache && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/usr/lib/ccache:$PATH"
+
+
+RUN git clone --recurse-submodules --branch ${TRT_LLM_BRANCH} https://github.com/NVIDIA/TensorRT-LLM ${SOURCE_DIR} || \
+    git clone --recurse-submodules https://github.com/NVIDIA/TensorRT-LLM.git ${SOURCE_DIR} ; \
+    git lfs pull
+
 COPY ${TRT_LLM_PATCH} ${GIT_PATCHES}
 COPY sources ${TMP_DIR}
 COPY build.sh install.sh /tmp/setup/
@@ -36,7 +58,7 @@ RUN uv pip install --upgrade transformers && \
 COPY llama.sh ${SOURCE_DIR}/
 
 # check python version and save variable PYTHON_VERSION
-RUN PYTHON_TAG=$(python3 -c "import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))") \
+RUN PYTHON_TAG=$(uv run python -c "import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))") \
     && echo "PYTHON_TAG=${PYTHON_TAG}"
 ARG PYTHON_VERSION=${PYTHON_TAG}
 

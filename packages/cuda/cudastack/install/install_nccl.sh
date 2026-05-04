@@ -1,40 +1,44 @@
 #!/usr/bin/env bash
 set -eux
 
-echo "Installing NVIDIA NCCL $NCCL_VERSION"
+echo "Installing NVIDIA NCCL $NCCL_VERSION via network repo"
 
-if [ "$CUDA_ARCH" = "aarch64" ]; then
-  DEB="nccl-local-repo-${DISTRO}-${NCCL_VERSION}-cuda13.0_1.0-1_arm64.deb"
-
-elif [ "$CUDA_ARCH" = "tegra-aarch64" ]; then
-  if [ "$FORCE_BUILD" = "on" ]; then
-    echo "Forcing build of NVIDIA NCCL ${NCCL_VERSION}"
-    exit 1
-  fi
-  tarpack install "nccl-${NCCL_VERSION}"
-  exit 0
+if [ "$CUDA_ARCH" = "tegra-aarch64" ] && [ "${CUDA_INSTALLED_VERSION}" -lt 132 ]; then
+    REPO_ARCH="arm64"
+elif [ "$(uname -m)" = "aarch64" ]; then
+    REPO_ARCH="sbsa"
 else
-  DEB="nccl-local-repo-${DISTRO}-${NCCL_VERSION}-cuda13.0_1.0-1_amd64.deb"
+    REPO_ARCH="x86_64"
 fi
 
-cd $TMP
-wget $WGET_FLAGS $MULTIARCH_URL/$DEB
-if [ "$CUDA_ARCH" != "tegra-aarch64" ]; then
-    dpkg -i $DEB
-    cp /var/nccl-local-repo-${DISTRO}-${NCCL_VERSION}-cuda13.0/nccl-local-*-keyring.gpg /usr/share/keyrings/
-    apt-get update
-    dpkg -i $DEB
-    apt-get -y install libnccl2 libnccl-dev
-else
-cd "$TMP"
-wget $WGET_FLAGS "$MULTIARCH_URL/$DEB"
-dpkg -i "$DEB"
-cp /var/nccl-local-repo-${DISTRO}-"$NCCL_VERSION"-cuda13.0/nccl-local-*-keyring.gpg /usr/share/keyrings/
+CUDA_MAJOR="${CUDA_INSTALLED_VERSION:0:2}"
+CUDA_MINOR="${CUDA_INSTALLED_VERSION:2}"
+CUDA_VER="${CUDA_MAJOR}.${CUDA_MINOR}"
+NCCL_APT_VER="${NCCL_VERSION}-1+cuda${CUDA_VER}"
+
+echo "NCCL apt version: ${NCCL_APT_VER} (repo: ${DISTRO}/${REPO_ARCH})"
+
+cd /tmp
+
+wget $WGET_FLAGS \
+    "https://developer.download.nvidia.com/compute/cuda/repos/${DISTRO}/${REPO_ARCH}/cuda-keyring_1.1-1_all.deb" \
+    -O cuda-keyring.deb
+dpkg -i cuda-keyring.deb
 apt-get update
-apt-get -y install libnccl2 libnccl-dev
-fi
-rm -rf /tmp/*.deb
-rm -rf /*.deb
+
+apt-get install -y --no-install-recommends \
+    libnccl2=${NCCL_APT_VER} \
+    libnccl-dev=${NCCL_APT_VER}
+
+# Remove cuda-keyring to prevent the global NVIDIA repo from propagating
+# to subsequent build layers (preserves version control of installed packages)
+dpkg --purge cuda-keyring 2>/dev/null || true
+rm -f /etc/apt/sources.list.d/cuda-*-keyring.list
+rm -f /etc/apt/preferences.d/cuda-repository-pin-600
+rm -f /usr/share/keyrings/cuda-archive-keyring.gpg
+
+rm -f /tmp/cuda-keyring.deb
 rm -rf /var/lib/apt/lists/*
 apt-get clean
+
 echo "NVIDIA NCCL $NCCL_VERSION installed successfully"

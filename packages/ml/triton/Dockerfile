@@ -1,7 +1,8 @@
 #---
 # name: triton
 # group: ml
-# depends: [pytorch]
+# depends: [pytorch, pybind11]
+# buildkit_device: nvidia.com/gpu=all
 # config: config.py
 # requires: '>=35'
 # test: test.py

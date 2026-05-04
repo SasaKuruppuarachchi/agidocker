@@ -1,7 +1,8 @@
 #---
 # name: ffmpeg
 # group: multimedia
-# depends: [build-essential, video-codec-sdk, llvm:21]
+# depends: [build-essential, video-codec-sdk, llvm:22]
+# buildkit_device: nvidia.com/gpu=all
 # notes: https://github.com/FFmpeg/FFmpeg
 # test: test.sh
 #---

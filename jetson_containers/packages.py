@@ -3,11 +3,14 @@ import concurrent.futures
 import copy
 import fnmatch
 import importlib
+import importlib.machinery
+import importlib.util
 import json
 import os
 import sys
 import threading
 import time
+import types
 import yaml
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
@@ -20,12 +23,61 @@ from .l4t_version import (
 from .logging import log_debug, log_warning, log_error
 from .utils import get_repo_dir
 
+
+class _PackagesFinder(importlib.abc.MetaPathFinder):
+    """
+    Meta path finder that resolves ``packages.*`` imports against the
+    filesystem tree under ``<repo>/packages/``.  This allows config.py
+    files loaded by config_package() to do cross-package imports like
+    ``from packages.ml.pytorch.version import PYTORCH_VERSION`` without
+    requiring ``__init__.py`` files in every intermediate directory.
+    """
+    _packages_root = None
+
+    @classmethod
+    def _root(cls):
+        if cls._packages_root is None:
+            cls._packages_root = os.path.join(get_repo_dir(), 'packages')
+        return cls._packages_root
+
+    @classmethod
+    def find_spec(cls, fullname, path, target=None):
+        parts = fullname.split('.')
+        if parts[0] != 'packages' or len(parts) < 2:
+            return None
+
+        fs_path = os.path.join(cls._root(), *parts[1:])
+
+        if os.path.isdir(fs_path):
+            init_file = os.path.join(fs_path, '__init__.py')
+            if os.path.isfile(init_file):
+                return importlib.util.spec_from_file_location(
+                    fullname, init_file,
+                    submodule_search_locations=[fs_path],
+                )
+            spec = importlib.machinery.ModuleSpec(fullname, None, is_package=True)
+            spec.submodule_search_locations = [fs_path]
+            return spec
+
+        py_file = fs_path + '.py'
+        if os.path.isfile(py_file):
+            return importlib.util.spec_from_file_location(fullname, py_file)
+
+        return None
+
+
+def _install_packages_finder():
+    """Register _PackagesFinder on sys.meta_path (idempotent)."""
+    if not any(isinstance(f, _PackagesFinder) for f in sys.meta_path):
+        sys.meta_path.insert(0, _PackagesFinder())
+
+
 _PACKAGES = {}
 
 _PACKAGE_SCAN = False
 _PACKAGE_DIRS = [os.path.join(get_repo_dir(), 'packages/*')]
 _PACKAGE_OPTS = {'check_l4t_version': True}
-_PACKAGE_KEYS = ['alias', 'build_args', 'build_flags', 'config', 'depends', 'disabled',
+_PACKAGE_KEYS = ['alias', 'build_args', 'build_flags', 'buildkit_device', 'config', 'depends', 'disabled',
                  'dockerfile', 'docs', 'group', 'name', 'notes', 'path',
                  'prefix', 'postfix', 'requires', 'test']
 
@@ -153,7 +205,7 @@ def scan_packages(package_dirs=_PACKAGE_DIRS, rescan=False, **kwargs):
     package['postfix'] = package['postfix'] + f"-{LSB_RELEASE}"
 
     # skip recursively searching under these packages
-    PRELOAD = ['robots/ros']
+    PRELOAD = ['physicalAI/ros']
     BLACKLIST = ['vila-microservice/src']
 
     def is_blacklisted(x):
@@ -507,6 +559,21 @@ def config_package(package):
         if config_ext == '.py':
             log_debug(f"Loading {config_path}")
             module_name = f"packages.{package['name']}.config"
+
+            if 'packages' not in sys.modules:
+                pkg_mod = types.ModuleType('packages')
+                pkg_mod.__path__ = [os.path.join(get_repo_dir(), 'packages')]
+                pkg_mod.__package__ = 'packages'
+                sys.modules['packages'] = pkg_mod
+                _install_packages_finder()
+
+            parent_name = f"packages.{package['name']}"
+            if parent_name not in sys.modules:
+                parent_mod = types.ModuleType(parent_name)
+                parent_mod.__path__ = [package['path']]
+                parent_mod.__package__ = parent_name
+                sys.modules[parent_name] = parent_mod
+
             spec = importlib.util.spec_from_file_location(module_name, config_path)
             module = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = module
