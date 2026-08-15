@@ -229,8 +229,11 @@ DISPLAY_DEVICE=""
 
 if [ -n "$DISPLAY" ]; then
 	echo "### DISPLAY environmental variable is already set: \"$DISPLAY\""
-	# give docker root user X11 permissions
-	xhost +si:localuser:root || sudo xhost +si:localuser:root
+	# Give X11 access to the user the container will run as.
+	# DOCKER_USER may be "uid:gid" — extract just the user portion for xhost.
+	_XHOST_USER="${DOCKER_USER%%:*}"
+	_XHOST_USER="${_XHOST_USER:-root}"
+	xhost "+si:localuser:${_XHOST_USER}" || sudo xhost "+si:localuser:${_XHOST_USER}"
 
 	# enable SSH X11 forwarding inside container (https://stackoverflow.com/q/48235040)
 	XAUTH=/tmp/.docker.xauth
@@ -260,16 +263,63 @@ SSH_KEY_VOLUME=""
 SSH_KEY_ENV=""
 
 if [ -n "$SCP_UPLOAD_KEY" ] && [ -f "$SCP_UPLOAD_KEY" ]; then
-	# Mount SSH key to a standard location in the container
-	# Mount to /root/.ssh/scp_upload_key and update the env var to point to it
-	SSH_KEY_VOLUME="-v $SCP_UPLOAD_KEY:/root/.ssh/scp_upload_key:ro"
-	SSH_KEY_ENV="-e SCP_UPLOAD_KEY=/root/.ssh/scp_upload_key"
+	# Mount SSH key under /run/secrets/ so it is accessible regardless of
+	# which user the container runs as (avoids the /root/.ssh/ ownership issue
+	# when DOCKER_USER is set to a non-root identity).
+	SSH_KEY_VOLUME="-v $SCP_UPLOAD_KEY:/run/secrets/scp_upload_key:ro"
+	SSH_KEY_ENV="-e SCP_UPLOAD_KEY=/run/secrets/scp_upload_key"
 fi
 
-# extra flags
-EXTRA_FLAGS=""
+# Non-root user support.
+# Set DOCKER_USER=uid:gid (e.g. "1000:1000") or a username to run the
+# container as a non-root identity.  Omit or leave empty to run as root.
+#
+# Device access: hardware devices (/dev/snd, /dev/video*, /dev/i2c-*, etc.)
+# are owned by Linux groups inside the container.  The named supplementary
+# groups below are added automatically so a non-root user can still reach
+# them.  These GIDs match between the host and standard L4T/Ubuntu base images.
+# NOTE: CSI cameras (nvargus-daemon) require root and cannot be used with
+# DOCKER_USER — see docs/run.md for details.
+DOCKER_USER_ARG=""
+if [ -n "$DOCKER_USER" ]; then
+	DOCKER_USER_ARG="--user $DOCKER_USER \
+		--group-add video \
+		--group-add audio \
+		--group-add i2c \
+		--group-add dialout \
+		--group-add plugdev"
 
-if [ -n "$HUGGINGFACE_TOKEN" ]; then
+	# GPU access for non-root users (fixes CUDA error 801, issue #1136).
+	# On Jetson the GPU/Tegra device nodes (/dev/nvhost-gpu, /dev/nvmap,
+	# /dev/nvgpu/*, /dev/dri/render*) are owned by root:video / root:render
+	# with mode 0660, so a non-root process must be a member of those groups
+	# to open them — otherwise cudaGetDeviceCount() fails with error 801.
+	#
+	# We add the *numeric* GIDs that actually own the device nodes rather than
+	# adding by name, because the host's 'render' GID frequently does NOT match
+	# the container's 'render' GID, so --group-add render would grant the wrong
+	# GID and silently fail.  Passing the numeric GID matches the bind-mounted
+	# device node exactly.  GID 0 (root-owned / world-readable nodes) is skipped.
+	GPU_DEV_GIDS=$(ls -lLn /dev/nvidia* /dev/nvhost* /dev/nvmap /dev/nvgpu/*/* /dev/dri/render* 2>/dev/null \
+		| awk 'NF>=4 && $4 ~ /^[0-9]+$/ && $4 != 0 { print $4 }' | sort -un)
+	for gid in $GPU_DEV_GIDS; do
+		DOCKER_USER_ARG="$DOCKER_USER_ARG --group-add $gid"
+	done
+fi
+
+# Runtime secrets: prefer file-backed tokens over plain env vars so values
+# are never exposed in 'docker inspect' output or the process list.
+#
+# HuggingFace token — preferred: point HUGGINGFACE_TOKEN_FILE at a file.
+# Fallback: HUGGINGFACE_TOKEN env var (value visible in docker inspect).
+EXTRA_FLAGS=""
+HF_SECRET_VOLUME=""
+
+if [ -n "$HUGGINGFACE_TOKEN_FILE" ] && [ -f "$HUGGINGFACE_TOKEN_FILE" ]; then
+	HF_SECRET_VOLUME="-v ${HUGGINGFACE_TOKEN_FILE}:/run/secrets/huggingface_token:ro"
+	EXTRA_FLAGS="$EXTRA_FLAGS --env HF_TOKEN_FILE=/run/secrets/huggingface_token"
+	EXTRA_FLAGS="$EXTRA_FLAGS --env HUGGINGFACE_TOKEN_FILE=/run/secrets/huggingface_token"
+elif [ -n "$HUGGINGFACE_TOKEN" ]; then
 	EXTRA_FLAGS="$EXTRA_FLAGS --env HUGGINGFACE_TOKEN=$HUGGINGFACE_TOKEN"
 fi
 
@@ -354,6 +404,8 @@ if [ $SYSTEM_ARCH = "tegra-aarch64" ]; then
 		$PULSE_AUDIO_ARGS \
 		--device /dev/bus/usb \
 		$SSH_KEY_VOLUME $SSH_KEY_ENV \
+		$HF_SECRET_VOLUME \
+		$DOCKER_USER_ARG \
 		$OPTIONAL_PERMISSION_ARGS $DATA_VOLUME $DISPLAY_DEVICE $V4L2_DEVICES $I2C_DEVICES $ACM_DEVICES $JTOP_SOCKET $EXTRA_FLAGS \
 		$CONTAINER_NAME_FLAGS \
 		"${filtered_args[@]}"
@@ -373,6 +425,8 @@ elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "x86_64" ]; then
 		--device /dev/snd \
 		$PULSE_AUDIO_ARGS \
 		$SSH_KEY_VOLUME $SSH_KEY_ENV \
+		$HF_SECRET_VOLUME \
+		$DOCKER_USER_ARG \
 		$OPTIONAL_ARGS $DATA_VOLUME $DISPLAY_DEVICE $V4L2_DEVICES $I2C_DEVICES $ACM_DEVICES $JTOP_SOCKET $EXTRA_FLAGS \
 		$CONTAINER_NAME_FLAGS \
 		"${filtered_args[@]}"

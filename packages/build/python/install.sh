@@ -35,14 +35,23 @@ if [ -f "${HOME}/.local/bin/uv" ]; then
   install -m 0755 "${HOME}/.local/bin/uv" /usr/local/bin/uv
 fi
 
-# Install the requested Python version via uv
+# Install the requested Python version via uv.
+# Use a world-readable install dir instead of the default ($HOME/.local/share/uv/python),
+# which lands under /root (mode 0700) and makes the interpreter inaccessible to
+# non-root users in the container (the /opt/venv symlinks point back into /root).
+# See https://github.com/dusty-nv/jetson-containers/issues/1575
+export UV_PYTHON_INSTALL_DIR=/opt/python
 uv python install "${PYTHON_INSTALL_VERSION}"
 
-# Find the path to that Python version
+# Find the path to that Python version (also reads UV_PYTHON_INSTALL_DIR)
 PY_BIN="$(uv python find "${PYTHON_INSTALL_VERSION}")"
 
 # Create a virtual environment in /opt/venv
 uv venv --python "${PY_BIN}" --system-site-packages /opt/venv
+
+# Ensure the interpreter and venv are traversable/readable by non-root users,
+# regardless of the build environment's umask (defensive; uv defaults to 0755).
+chmod -R a+rX /opt/python /opt/venv
 
 # Activate the venv
 . /opt/venv/bin/activate

@@ -36,9 +36,12 @@ The text between `#---` is YAML and is extracted by the build system.  Each pack
 | `group`       | `str`                | optional group the package belongs to (e.g. `ml`, `llm`, `cuda`)                        |
 | `notes`       | `str`                | brief one-line docs that are added to a package's readme table                          |
 | `path`        | `str`                | path to the package's directory (automatically populated)                               |
+| `multistage`  | `bool`               | set to `true` when the Dockerfile uses intermediate `FROM ... AS` stages; build system injects ccache/device mounts only into the final `FROM ${BASE_IMAGE}` stage |
 | `prefix`      | `str`                | text prepended to the container tag. not part of the package's name for referencing.    |
 | `postfix`     | `str`                | text appended to the container tag (default is `r$L4T_VERSION`)                         |
 | `requires`    | `str` or `list[str]` | the version(s) of L4T or CUDA the package is compatible with (e.g. `>=35.2.1` for JetPack 5.1+) |
+| `run_user`    | `str`                | the non-root username the container is designed to run as (informational; used by tooling) |
+| `secrets`     | `list[str]`          | build-time secrets the package needs; each name maps to a `JETSON_SECRET_<NAME>` env var pointing to a host file, mounted via BuildKit `--secret` and never baked into image layers |
 | `test`        | `str` or `list[str]` | one or more test commands/scripts to run (`.py`, `.sh`, or a shell command)             |
 
 > * These keys can all be accessed by any of the configuration methods below<br>

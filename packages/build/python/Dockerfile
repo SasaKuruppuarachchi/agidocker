@@ -28,7 +28,8 @@ ENV PYTHON_VERSION=${PYTHON_VERSION} \
     TWINE_NON_INTERACTIVE=1 \
     DEBIAN_FRONTEND=noninteractive \
     PATH=/opt/venv/bin:$PATH \
-    UV_PYTHON=/opt/venv/bin/python
+    UV_PYTHON=/opt/venv/bin/python \
+    UV_PYTHON_INSTALL_DIR=/opt/python
 
 #PYTHONPATH=/opt/venv/lib/python${PYTHON_VERSION_ARG}/site-packages:/usr/lib/python3/dist-packages:$PYTHONPATH \
 

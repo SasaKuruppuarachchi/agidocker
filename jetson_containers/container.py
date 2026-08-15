@@ -151,8 +151,15 @@ def _prepare_buildkit_dockerfile(
         return command[:prefix_len], options, rest
 
     from_pattern = re.compile(r'^\s*FROM\s+')
+    from_intermediate_pattern = re.compile(r'^\s*FROM\s+.*\s+AS\s+\S+', re.IGNORECASE)
     run_pattern = re.compile(r'^(\s*)RUN\s+(.*)$')
     output_lines = []
+
+    # Track whether we are in the final (non-aliased) stage or an intermediate
+    # stage (FROM ... AS alias).  Only the final stage gets ccache ENV injection
+    # and RUN-level device/ccache mounts — intermediate stages (e.g. a node or
+    # cmake builder) don't need GPU access and may not have the same toolchain.
+    in_final_stage = True
 
     for line in lines:
         newline = '\n' if line.endswith('\n') else ''
@@ -160,10 +167,11 @@ def _prepare_buildkit_dockerfile(
         match = run_pattern.match(stripped_line)
 
         if from_pattern.match(stripped_line):
+            in_final_stage = not bool(from_intermediate_pattern.match(stripped_line))
             output_lines.append(line)
-            if ccache:
+            if ccache and in_final_stage:
                 output_lines.append(env_line)
-        elif match:
+        elif match and in_final_stage:
             run_options = []
 
             if device and '--device=' not in match.group(2):
@@ -343,7 +351,8 @@ def build_container(
                 user_buildkit = buildkit
                 active_buildkit_device = _normalize_buildkit_device(buildkit_device or pkg.get('buildkit_device', ''))
                 device_requested = bool(active_buildkit_device) or _dockerfile_requests_buildkit_device(dockerfilepath)
-                use_buildx = user_buildkit or scp_key_provided or bool(active_buildkit_device)
+                pkg_has_secrets = bool(pkg.get('secrets', []))
+                use_buildx = user_buildkit or scp_key_provided or bool(active_buildkit_device) or pkg_has_secrets
 
                 # Set BuildKit log size limit (default 500MB, configurable via BUILDKIT_STEP_LOG_MAX_SIZE)
                 # Default Docker BuildKit limit is 2MiB which can clip large build outputs
@@ -386,6 +395,14 @@ def build_container(
 
                 cmd += f"  --build-arg BASE_IMAGE={base}" + _NEWLINE_
                 cmd += f"  --build-arg NVIDIA_DRIVER_CAPABILITIES=all" + _NEWLINE_
+
+                # Non-root user support: pass identity args if the caller has
+                # set them via env vars so packages can create / switch to a
+                # non-root user with a stable UID/GID.
+                for arg_name in ('CONTAINER_USER', 'CONTAINER_UID', 'CONTAINER_GID'):
+                    val = os.environ.get(arg_name, '')
+                    if val:
+                        cmd += f"  --build-arg {arg_name}={val}" + _NEWLINE_
                 if use_buildx and any(cache.startswith('type=inline') for cache in cache_to):
                     cmd += f"  --build-arg BUILDKIT_INLINE_CACHE=1" + _NEWLINE_
 
@@ -406,6 +423,24 @@ def build_container(
                 # during RUN commands, never persisted in image layers)
                 if scp_key_provided:
                     cmd += f"  --secret id=scp_upload_key,src={scp_upload_key}" + _NEWLINE_
+
+                # Mount package-declared build secrets.  Each entry in the package's
+                # 'secrets' list maps to a JETSON_SECRET_<NAME> env var that must
+                # point to a readable file on the host.  The secret is exposed inside
+                # RUN steps as /run/secrets/<name> and is never baked into a layer.
+                pkg_secrets = pkg.get('secrets', [])
+                if isinstance(pkg_secrets, str):
+                    pkg_secrets = [pkg_secrets]
+                for secret_name in pkg_secrets:
+                    env_key = f"JETSON_SECRET_{secret_name.upper().replace('-', '_')}"
+                    secret_file = os.environ.get(env_key, '')
+                    if secret_file and os.path.isfile(secret_file):
+                        cmd += f"  --secret id={secret_name},src={secret_file}" + _NEWLINE_
+                    else:
+                        log_warning(
+                            f"Package '{package}' declares secret '{secret_name}' but "
+                            f"{env_key} is not set or does not point to a file — skipping"
+                        )
 
                 cmd += '   ' + pkg['path']
 
@@ -633,7 +668,7 @@ def test_container(name, package, simulate=False, build_idx=None):
 
         cmd = f"{sudo_prefix()}docker run -t --rm --network=host --privileged --shm-size=8g "
 
-        cmd += f"--gpus=all" + _NEWLINE_
+        cmd += f"--runtime=nvidia" + _NEWLINE_
         cmd += f"  --env NVIDIA_DRIVER_CAPABILITIES=all" + _NEWLINE_
 
         cmd += f"  --volume {package['path']}:/test" + _NEWLINE_

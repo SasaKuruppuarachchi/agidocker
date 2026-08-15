@@ -78,8 +78,8 @@ _PACKAGE_SCAN = False
 _PACKAGE_DIRS = [os.path.join(get_repo_dir(), 'packages/*')]
 _PACKAGE_OPTS = {'check_l4t_version': True}
 _PACKAGE_KEYS = ['alias', 'build_args', 'build_flags', 'buildkit_device', 'config', 'depends', 'disabled',
-                 'dockerfile', 'docs', 'group', 'name', 'notes', 'path',
-                 'prefix', 'postfix', 'requires', 'test']
+                 'dockerfile', 'docs', 'group', 'multistage', 'name', 'notes', 'path',
+                 'prefix', 'postfix', 'requires', 'run_user', 'secrets', 'test']
 
 
 def package_search_dirs(package_dirs, scan=False):
