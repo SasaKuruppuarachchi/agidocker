@@ -1,23 +1,8 @@
-__pycache__
-*.pyc
-*.tar.gz
-*.so
-*.deb
-*.symvers
-data/*
-logs
-test/data
-runner
-venv
-.env
-*.minus-github-api
-.DS_Store
-.vscode
-.ninja_log
-.polyscope.ini
-.ipynb_checkpoints
-.idea
-nv_tegra_release
-kokoro-*-*.wav
-audio.wav
-benchmark.csv
+# Ignore all pycache files
+**/__pycache__/**
+.vscode/
+# Ignore config files
+get-pip.py
+#.isaac_ros_common-config
+verify_cuda_cudnn
+test_ocv_cuda

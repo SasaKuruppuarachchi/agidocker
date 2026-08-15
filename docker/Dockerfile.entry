@@ -1,0 +1,10 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# Copy scripts and set permissions !!! must be last to leverage docker cache !!!
+RUN rm -rf /var/lib/apt/lists/*
+COPY scripts/*entrypoint.sh /usr/local/bin/scripts/
+RUN chmod +x /usr/local/bin/scripts/*.sh || true
+
+COPY scripts/entrypoint_addition[s]/*.sh /usr/local/bin/scripts/entrypoint_additions/
+RUN chmod +x /usr/local/bin/scripts/entrypoint_additions/*.sh || true

@@ -1,0 +1,86 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# Install apt dependencies and add repositories
+RUN apt-get update && \
+    add-apt-repository universe -y && \
+    add-apt-repository ppa:borglab/gtsam-release-4.2 -y && \
+    apt-get update && \
+    apt-get install -y \
+        tmux tmuxinator i2c-tools \
+        ros-humble-ros-gz-sim \
+        ros-humble-ros-gz-bridge \
+        python3-jinja2 \
+        python3-pydantic \
+        ros-humble-ament-cmake-clang-format \
+        ros-humble-geographic-msgs \
+        libgeographic-dev \
+        python3-tk \
+        python3-colcon-mixin \
+        ros-dev-tools \
+        python3-flake8-polyfill \
+        cppcheck \
+        libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+        python3-wstool \
+        ros-humble-mocap4r2-msgs \
+        ros-humble-mocap4r2-control \
+        ros-humble-teleop-twist-joy \
+        ros-humble-pcl-conversions \
+        ros-humble-pcl-ros \
+        libapr1-dev libaprutil1-dev \
+        libeigen3-dev \
+        libgtsam-dev libgtsam-unstable-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install pip dependencies
+RUN python3 -m pip install --upgrade pip && \
+    pip3 install \
+        "numpy>=1.24.4,<2" \
+        kconfiglib smbus jinja2 empy jsonschema pyros-genmsg packaging toml future \
+        freesimplegui pymap3d \
+        pylint cmakelint cpplint \
+        colcon-lcov-result \
+        "jax[cuda12]" \
+        ultralytics seaborn albumentations h5py warmup_scheduler \
+        diffusers==0.11.1 vit-pytorch efficientnet_pytorch \
+        "git+https://github.com/robodhruv/visualnav-transformer.git@main#egg=vint-train&subdirectory=train" \
+        liecasadi matplotlib pyhocon pypose wandb onnxruntime && \
+    pip3 install -e git+https://github.com/real-stanford/diffusion_policy.git@main#egg=diffusion_policy
+
+# Colcon mixin setup
+RUN colcon mixin add default https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml && \
+    colcon mixin update default && \
+    rm -rf log
+
+# Gazebo key and repo
+RUN wget https://packages.osrfoundation.org/gazebo.gpg -O /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | \
+    tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null && \
+    apt-get update
+
+RUN apt-get install -y ros-${ROS_DISTRO}-octomap-ros && rm -f /etc/apt/sources.list.d/isaac-ros.list && \
+    apt-get install -y ros-humble-camera-calibration && \
+    apt-get install -y ros-${ROS_DISTRO}-marti-common-msgs
+
+RUN apt-get update && apt-get install -y libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 libx11-xcb1 libxkbcommon-x11-0 libxcb1 libxcb-xinerama0 libavcodec-extra ros-humble-ffmpeg-image-transport ros-humble-depthai ros-humble-foxglove-msgs ros-humble-rviz-imu-plugin gedit ros-humble-rmw-cyclonedds-cpp
+RUN bash -c "$(curl -sLo- https://superfile.dev/install.sh)"
+### !!! @TODO: Temporary fix for torchvision compatibility with torch 2.1 and cuda 12.6 ### 
+RUN pip3 uninstall -y torchvision && pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128 
+RUN pip3 install torchrl hydra-core && apt-get install ros-humble-octomap-server ros-humble-octomap-rviz-plugins
+
+# Install dependencies, download, build, and clean up Ceres 2.0.0
+RUN apt-get update && apt-get install -y \
+    build-essential cmake wget libgoogle-glog-dev libgflags-dev libatlas-base-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && wget -qO- https://github.com/ceres-solver/ceres-solver/archive/refs/tags/2.0.0.tar.gz | tar -xz -C /opt \
+    && mkdir /opt/ceres-solver-2.0.0/build \
+    && cd /opt/ceres-solver-2.0.0/build \
+    && cmake .. \
+       -DCMAKE_BUILD_TYPE=Release \
+       -DBUILD_EXAMPLES=OFF \
+       -DBUILD_TESTING=OFF \
+       -DSUITESPARSE=OFF \
+    && make -j$(nproc) && make install \
+    && rm -rf /opt/ceres-solver-2.0.0
+
+CMD ["/bin/bash"]

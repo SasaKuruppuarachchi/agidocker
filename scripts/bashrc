@@ -1,0 +1,76 @@
+############################################################
+# isaac_ros_common container user shell customizations
+# This file is appended to /home/<user>/.bashrc by the
+# workspace-entrypoint.sh script (idempotently).
+############################################################
+# Force colored prompt
+force_color_prompt=yes
+
+PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+
+# Agipix / Isaac ROS helpers
+alias runagipix='cd /workspaces/isaac_ros-dev/src/isaac_ros_common && ./run.sh'
+
+alias runfxbridge='ros2 launch foxglove_bridge foxglove_bridge_launch.xml'
+
+# Aerostack2 helpers
+alias runas2='cd /workspaces/aerostack2_ws/src/aerostack2/as2_aerial_platforms/project_agipix/ && ./launch_as2.bash -s -t -g'
+alias stopas2='cd /workspaces/aerostack2_ws/src/project_agipix/ && ./stop.bash'
+alias sorpx4='source /workspaces/aerostack2_ws/install/setup.bash'
+export AEROSTACK2_WORKSPACE=/workspaces/aerostack2_ws
+export PX4_FOLDER=/workspaces/aerostack2_ws/src/thirdparty/PX4-Autopilot
+
+# Agipix control stack
+alias runagi='cd /workspaces/agipix_control/src/agipix_autonomy/tmux/ && ./start.sh -s'
+alias sorcon='source /workspaces/agipix_control/install/setup.bash'
+alias bilcon='cd /workspaces/agipix_control && colcon build --packages-skip px4_msgs'
+alias billidar='cd /workspaces/lidar_ws && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release'
+# Lidar workspace
+alias sorlidar='source /workspaces/lidar_ws/install/setup.bash'
+
+# IMO 
+alias sora2rl='cd /workspaces/a2rl && source /workspaces/a2rl/install/setup.bash'
+
+# Isaac workspace
+alias sorisaac='source /workspaces/isaac_ros-dev/install/setup.bash'
+agents-assemble() {
+    local TARGET_DIR="${1:-.}"
+    local URL="https://raw.githubusercontent.com/SasaKuruppuarachchi/copilot-agentic-workflows/main/employ_agents.sh"
+    local TIMESTAMP=$(date +%s)
+    
+    echo "Fetching latest script version..."
+    
+    curl -fsSL -H "Cache-Control: no-cache" "${URL}?${TIMESTAMP}" -o employ_agents.sh && \
+    chmod +x employ_agents.sh && \
+    ./employ_agents.sh "$TARGET_DIR" && \
+    rm employ_agents.sh
+}
+
+export CUDA=12.6
+export PATH=/usr/local/cuda-$CUDA/bin${PATH:+:${PATH}}
+export CUDA_PATH=/usr/local/cuda-$CUDA
+export CUDA_HOME=/usr/local/cuda-$CUDA
+export LIBRARY_PATH=$CUDA_HOME/lib64:$LIBRARY_PATH
+export LD_LIBRARY_PATH=/usr/local/cuda-$CUDA/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+export LD_LIBRARY_PATH=/usr/local/cuda/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+export NVCC=/usr/local/cuda-$CUDA/bin/nvcc
+export CFLAGS="-I$CUDA_HOME/include $CFLAGS"
+export LD_LIBRARY_PATH=/usr/local/cuda-$CUDA/targets/aarch64-linux/lib:$LD_LIBRARY_PATH
+export CPATH=/usr/local/cuda-$CUDA/targets/aarch64-linux/include:$CPATH
+export CUDNN_INCLUDE_DIR=/usr/include/aarch64-linux-gnu
+export CUDNN_LIBRARY=/usr/lib/aarch64-linux-gnu/libcudnn.so
+
+# Environment variables
+export PATH="$HOME/.local/bin:$PATH"
+export ROS_DOMAIN_ID=3 # Agipix-hard domain sim-3
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+
+#export LD_LIBRARY_PATH="/workspaces/agipix_control/src/agipix_autonomy/trajectory_planner/include/trajectory_planner/third_party/lib/x86:$LD_LIBRARY_PATH"
+export ISAAC_ROS_WS="/workspaces/isaac_ros-dev"
+
+export RCUTILS_COLORIZED_OUTPUT=1
+export RCUTILS_LOGGING_USE_STDOUT=1
+export RCUTILS_CONSOLE_OUTPUT_FORMAT='[{severity}] [{time}] [{name}]: {message}'
+export PYTHONUNBUFFERED=1
+# End of customizations
+############################################################

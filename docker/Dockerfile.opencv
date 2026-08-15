@@ -1,0 +1,91 @@
+### Build OpenCV + CUDA inside the image (mirrors build_ocv_cuda.sh)
+# syntax=docker/dockerfile:1.6
+
+ARG BASE_IMAGE
+
+FROM ${BASE_IMAGE} AS ocv-builder
+
+ARG PYTHON_VERSION=3.10.12
+ARG OPENCV_VERSION=4.11.0
+ARG CUDA_ARCH_BIN=8.7,8.9
+ARG NUMPY_VERSION_SPEC=<2
+ARG WORKSPACE_ROOT=/opt/ocv
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY ocv/build.sh ocv/install.sh /tmp/ocv/
+
+RUN apt update && apt install -y --no-install-recommends \
+    ca-certificates \
+    build-essential cmake ninja-build pkg-config git \
+    python3 python3-pip python3-venv python3-dev \
+    # Image I/O libraries
+    libjpeg-dev libpng-dev libtiff-dev \
+    # Install basic codec libraries
+    libavcodec-dev libavformat-dev libswscale-dev \
+    # Install GStreamer development libraries
+    libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+    # Install additional codec and format libraries
+    libxvidcore-dev libx264-dev libmp3lame-dev libopus-dev \
+    # Install additional audio codec libraries
+    libmp3lame-dev libvorbis-dev \
+    # Optional: Install VA-API for hardware acceleration
+    libva-dev \
+    # Install video capture libraries and utilities
+    libdc1394-dev libxine2-dev libv4l-dev libmetis-dev \
+    # GTK lib for the graphical user functionalites coming from OpenCV highghui module
+    libgtk-3-dev \
+    # Parallelism library C++ for CPU
+    libtbb-dev \
+    # Optimization libraries for OpenCV
+    libatlas-base-dev gfortran libcudnn9-dev-cuda-12 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN chmod +x /tmp/ocv/build.sh /tmp/ocv/install.sh && \
+	WORKSPACE_ROOT=${WORKSPACE_ROOT} \
+	OPENCV_VERSION=${OPENCV_VERSION} \
+	PYTHON_VERSION=${PYTHON_VERSION} \
+    NUMPY_VERSION_SPEC=${NUMPY_VERSION_SPEC} \
+	CUDA_ARCH_BIN=${CUDA_ARCH_BIN} \
+	/tmp/ocv/build.sh
+
+FROM ${BASE_IMAGE}
+
+ARG PYTHON_VERSION=3.10.12
+ARG OPENCV_VERSION=4.11.0
+ARG NUMPY_VERSION_SPEC=<2
+ARG WORKSPACE_ROOT=/opt/ocv
+RUN python3 -m pip uninstall -y opencv opencv-python opencv-contrib-python python3-opencv
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PKG_CONFIG_PATH=${WORKSPACE_ROOT}/build/install/lib/pkgconfig:${PKG_CONFIG_PATH:-} \
+    LD_LIBRARY_PATH=${WORKSPACE_ROOT}/build/install/lib:${LD_LIBRARY_PATH:-}
+
+RUN apt update && \
+     apt install -y --no-install-recommends \
+        ca-certificates \
+        python3 python3-pip python3-venv \
+        libjpeg-dev libpng-dev libtiff-dev \
+        libavcodec-dev libavformat-dev libswscale-dev \
+        libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+        #libxvidcore-dev libx264-dev libmp3lame-dev libopus-dev \
+        #libmp3lame-dev libvorbis-dev \
+        #ffmpeg \
+        #libva-dev \
+        #libdc1394-25 libdc1394-dev libxine2-dev libv4l-dev v4l-utils \
+        libgtk-3-dev \
+        libtbb-dev libcudnn9-dev-cuda-12 \
+        #libatlas-base-dev \
+        && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ocv-builder ${WORKSPACE_ROOT}/build/install ${WORKSPACE_ROOT}/build/install
+COPY --from=ocv-builder ${WORKSPACE_ROOT}/build/wheelhouse ${WORKSPACE_ROOT}/build/wheelhouse
+COPY ocv/install.sh /tmp/ocv/install.sh
+
+RUN chmod +x /tmp/ocv/install.sh && \
+	WORKSPACE_ROOT=${WORKSPACE_ROOT} \
+	OPENCV_VERSION=${OPENCV_VERSION} \
+	PYTHON_VERSION=${PYTHON_VERSION} \
+    NUMPY_VERSION_SPEC=${NUMPY_VERSION_SPEC} \
+	/tmp/ocv/install.sh && \
+	rm -rf /tmp/ocv

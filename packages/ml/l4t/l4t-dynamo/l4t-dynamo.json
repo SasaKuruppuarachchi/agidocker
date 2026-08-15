@@ -1,7 +1,0 @@
-{
-    "l4t-dynamo": {
-        "group": "dynamo",
-        "depends": ["pytorch", "torchvision", "torchaudio", "transformers", "mamba", "nixl", "vllm", "sglang", "llvm:22", "pycuda"]
-
-    }
-}

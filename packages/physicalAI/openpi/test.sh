@@ -1,1 +1,0 @@
-uv run test.py
