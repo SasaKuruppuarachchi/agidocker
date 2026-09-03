@@ -9,9 +9,9 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
 function print_color {
-    tput setaf $1
+    tput setaf $1 2>/dev/null || true
     echo "$2"
-    tput sgr0
+    tput sgr0 2>/dev/null || true
 }
 
 function print_error {

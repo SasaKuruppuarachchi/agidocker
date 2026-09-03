@@ -14,7 +14,7 @@ ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source $ROOT/utils/print_color.sh
 
 function usage() {
-    print_info "Usage: run_dev.sh {-d isaac_ros_dev directory path OPTIONAL}"
+    print_info "Usage: run_dev.sh"
     print_info "       [--progress plain|auto|tty]"
     print_info "Copyright (c) 2021-2024, NVIDIA CORPORATION."
 }
@@ -42,7 +42,6 @@ if [[ ! -z "${CONFIG_IMAGE_KEY}" ]]; then
     IMAGE_KEY=$CONFIG_IMAGE_KEY
 fi
 
-ISAAC_ROS_DEV_DIR="${ISAAC_ROS_WS}/src/agidocker"
 SKIP_IMAGE_BUILD=0
 SKIP_REGISTRY_CHECK=0
 BUILD_PROGRESS=
@@ -52,7 +51,7 @@ eval set -- "$VALID_ARGS"
 while [ : ]; do
   case "$1" in
     -d | --isaac_ros_dev_dir)
-        ISAAC_ROS_DEV_DIR="$2"
+        print_warning "Warning: -d / --isaac_ros_dev_dir is deprecated and no longer used."
         shift 2
         ;;
     -i | --image_key)
@@ -103,27 +102,6 @@ pushd . >/dev/null
 cd $ROOT
 ON_EXIT+=("popd")
 
-# Fall back if isaac_ros_dev_dir not specified
-if [[ -z "$ISAAC_ROS_DEV_DIR" ]]; then
-    ISAAC_ROS_DEV_DIR_DEFAULTS=("$HOME/workspaces/isaac_ros-dev" "/workspaces/isaac_ros-dev" "/mnt/nova_ssd/workspaces/isaac_ros-dev")
-    for ISAAC_ROS_DEV_DIR in "${ISAAC_ROS_DEV_DIR_DEFAULTS[@]}"
-    do
-        if [[ -d "$ISAAC_ROS_DEV_DIR" ]]; then
-            break
-        fi
-    done
-
-    if [[ ! -d "$ISAAC_ROS_DEV_DIR" ]]; then
-        ISAAC_ROS_DEV_DIR=$(realpath "$ROOT/../")
-    fi
-    print_warning "isaac not specified, assuming $ISAAC_ROS_DEV_DIR"
-fi
-
-# Validate isaac_ros_dev_dir
-if [[ ! -d "$ISAAC_ROS_DEV_DIR" ]]; then
-    print_error "Specified isaac does not exist: $ISAAC_ROS_DEV_DIR"
-    exit 1
-fi
 
 # Prevent running as root.
 if [[ $(id -u) -eq 0 ]]; then
@@ -156,9 +134,8 @@ fi
 
 # Check if all LFS files are in place in the repository where this script is running from.
 cd $ROOT
-git rev-parse &>/dev/null
-if [[ $? -eq 0 ]]; then
-    LFS_FILES_STATUS=$(cd $ISAAC_ROS_DEV_DIR && git lfs ls-files | cut -d ' ' -f2)
+if git rev-parse &>/dev/null; then
+    LFS_FILES_STATUS=$(cd "$ROOT/.." && git lfs ls-files | cut -d ' ' -f2)
     for (( i=0; i<${#LFS_FILES_STATUS}; i++ )); do
         f="${LFS_FILES_STATUS:$i:1}"
         if [[ "$f" == "-" ]]; then
@@ -186,7 +163,7 @@ if [[ ! -z $CONFIG_SKIP_IMAGE_BUILD ]]; then
     SKIP_IMAGE_BUILD=1
 fi
 
-BASE_NAME="isaac_ros_dev-$PLATFORM"
+BASE_NAME="agipix_ros_dev-$PLATFORM"
 if [[ ! -z "$CONFIG_CONTAINER_NAME_SUFFIX" ]] ; then
     BASE_NAME="$BASE_NAME-$CONFIG_CONTAINER_NAME_SUFFIX"
 fi
@@ -207,7 +184,7 @@ if [ "$(docker ps -a --quiet --filter status=running --filter name=$CONTAINER_NA
 fi
 
 # Summarize launch
-print_info "Launching Isaac ROS Dev container with image key ${BASE_IMAGE_KEY}: ${ISAAC_ROS_DEV_DIR}"
+print_info "Launching Agipix ROS Dev container with image key ${BASE_IMAGE_KEY}"
 
 # Build image to launch
 if [[ $SKIP_IMAGE_BUILD -ne 1 ]]; then
@@ -248,7 +225,7 @@ DOCKER_ARGS+=("-e NVIDIA_VISIBLE_DEVICES=all")
 DOCKER_ARGS+=("-e NVIDIA_DRIVER_CAPABILITIES=all")
 DOCKER_ARGS+=("-e ROS_DOMAIN_ID")
 DOCKER_ARGS+=("-e USER")
-DOCKER_ARGS+=("-e ISAAC_ROS_WS=/workspaces/isaac_ros-dev")
+DOCKER_ARGS+=("-e ISAAC_ROS_WS=/workspaces/agipix_control")
 DOCKER_ARGS+=("-e HOST_USER_UID=`id -u`")
 DOCKER_ARGS+=("-e HOST_USER_GID=`id -g`")
 DOCKER_ARGS+=("-v /dev/bus/usb:/dev/bus/usb")
@@ -311,16 +288,14 @@ docker run -d -it --rm \
     --network host \
     --ipc=host \
     ${DOCKER_ARGS[@]} \
-    #-v $ISAAC_ROS_DEV_DIR:/workspaces/isaac_ros-dev/src/isaac_ros_common \
+    -v "$ROOT/bashrc:/usr/local/bin/scripts/bashrc:ro" \
     -v $WORKSPACES_DIR/dds:/workspaces/dds \
     -v $WORKSPACES_DIR/agipix_control:/workspaces/agipix_control \
     -v $WORKSPACES_DIR/lidar_ws:/workspaces/lidar_ws \
     -v $WORKSPACES_DIR/logging:/workspaces/logging \
-    #-v $WORKSPACES_DIR/a2rl:/workspaces/a2rl \
-    #-v $WORKSPACES_DIR/arrf:/workspaces/arrf \
     -v $WORKSPACES_DIR/ui:/workspaces/ui \
     -v $HOME/.profile:/home/admin/.profile \
-    --volume ~/workspace/earth_rover/.ide-session-data/sessions/ros2/.gemini:/root/.gemini \
+    --volume $WORKSPACES_DIR/docker/agidocker/.ide-session-data/sessions/ros2/.gemini:/root/.gemini \
     -v /etc/localtime:/etc/localtime:ro \
     --name "$CONTAINER_NAME" \
     --runtime nvidia \

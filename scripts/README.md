@@ -1,5 +1,8 @@
 # Isaac ROS Dev Build Scripts
 
 For Jetson or x86_64:
-  `run_dev.sh` creates a dev environment with ROS 2 installed. By default, the directory `/workspaces/isaac_ros-dev` in the container is mapped from `~/workspaces/isaac_ros-dev` on the host machine if it exists OR the current working directory from where the script was invoked otherwise. The host directory the container maps to can be explicitly set by running the script with the desired path as the first argument:
-  `run_dev.sh -d <path to workspace>`
+  `run_dev.sh` builds and launches the development container with ROS 2 and project workspace mounts configured under `$WORKSPACES_DIR`.
+  Shell configurations and aliases are automatically loaded from `scripts/bashrc`.
+
+Usage:
+  `./run_dev.sh [--skip-registry-check]`

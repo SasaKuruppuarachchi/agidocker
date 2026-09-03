@@ -111,7 +111,7 @@ if [[ -z "${BASE_IMAGE_KEY}" ]]; then
 fi
 
 if [[ -z "${DEPLOY_IMAGE_NAME}" ]]; then
-    DEPLOY_IMAGE_NAME="isaac_ros_deploy"
+    DEPLOY_IMAGE_NAME="agipix_ros_deploy"
     print_warning "Deploy image name not specified, assuming $DEPLOY_IMAGE_NAME"
 fi
 
@@ -129,7 +129,7 @@ if [[ ! -z "${ROS_WS}" ]]; then
     fi
 
     # Resolve ROS_WS_DEST from install directory setup.sh
-    ROS_WS_DEST=/workspaces/isaac_ros-dev
+    ROS_WS_DEST=/workspaces/agipix_control
     FILE_CONTENT=$(< "${ROS_WS}/install/setup.sh")
     REGEX="_colcon_prefix_chain_sh_COLCON_CURRENT_PREFIX=([^[:space:]]*)"
     if [[ $FILE_CONTENT =~ $REGEX ]]; then
@@ -184,7 +184,7 @@ cd $ROOT
 ON_EXIT+=("popd")
 
 # Setup staging temp directory
-TEMP_DIR=`mktemp -d -t isaac_ros_deploy_XXXXXXXX`
+TEMP_DIR=`mktemp -d -t agipix_deploy_XXXXXXXX`
 ON_EXIT+=("rm -Rf ${TEMP_DIR}")
 
 pushd . >/dev/null

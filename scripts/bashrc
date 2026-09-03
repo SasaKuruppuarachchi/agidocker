@@ -9,7 +9,6 @@ force_color_prompt=yes
 PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 
 # Agipix / Isaac ROS helpers
-alias runagipix='cd /workspaces/isaac_ros-dev/src/isaac_ros_common && ./run.sh'
 
 alias runfxbridge='ros2 launch foxglove_bridge foxglove_bridge_launch.xml'
 
@@ -31,8 +30,6 @@ alias sorlidar='source /workspaces/lidar_ws/install/setup.bash'
 # IMO 
 alias sora2rl='cd /workspaces/a2rl && source /workspaces/a2rl/install/setup.bash'
 
-# Isaac workspace
-alias sorisaac='source /workspaces/isaac_ros-dev/install/setup.bash'
 agents-assemble() {
     local TARGET_DIR="${1:-.}"
     local URL="https://raw.githubusercontent.com/SasaKuruppuarachchi/copilot-agentic-workflows/main/employ_agents.sh"
@@ -66,7 +63,6 @@ export ROS_DOMAIN_ID=3 # Agipix-hard domain sim-3
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 #export LD_LIBRARY_PATH="/workspaces/agipix_control/src/agipix_autonomy/trajectory_planner/include/trajectory_planner/third_party/lib/x86:$LD_LIBRARY_PATH"
-export ISAAC_ROS_WS="/workspaces/isaac_ros-dev"
 
 export RCUTILS_COLORIZED_OUTPUT=1
 export RCUTILS_LOGGING_USE_STDOUT=1
