@@ -33,13 +33,13 @@ BASE_DOCKER_REGISTRY_NAMES=("nvcr.io/nvidia/isaac/ros")
 #
 # CONFIG_DOCKER_SEARCH_DIRS (array, can be empty)
 
-if [[ -f "${ROOT}/.isaac_ros_common-config" ]]; then
-    . "${ROOT}/.isaac_ros_common-config"
+if [[ -f "${ROOT}/.agipix_ros_common-config" ]]; then
+    . "${ROOT}/.agipix_ros_common-config"
 fi
 
 # Override with config from user home directory if exists
-if [[ -f ~/.isaac_ros_common-config ]]; then
-    . ~/.isaac_ros_common-config
+if [[ -f ~/.agipix_ros_common-config ]]; then
+    . ~/.agipix_ros_common-config
 fi
 
 # Prepend configured docker search dirs

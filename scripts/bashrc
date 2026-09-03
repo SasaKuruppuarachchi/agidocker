@@ -1,5 +1,5 @@
 ############################################################
-# isaac_ros_common container user shell customizations
+# agipix_ros_common container user shell customizations
 # This file is appended to /home/<user>/.bashrc by the
 # workspace-entrypoint.sh script (idempotently).
 ############################################################
