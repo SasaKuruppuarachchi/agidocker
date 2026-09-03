@@ -110,6 +110,37 @@ if [[ $(id -u) -eq 0 ]]; then
     exit 1
 fi
 
+# Default and normalize WORKSPACES_DIR if not set
+if [[ -z "$WORKSPACES_DIR" ]]; then
+    WORKSPACES_DIR="$HOME/workspace"
+fi
+WORKSPACES_DIR="${WORKSPACES_DIR/#\~/$HOME}"
+
+# Ensure host directories for Docker volume mounts exist
+MOUNTED_DIRS=(
+    "$WORKSPACES_DIR/dds"
+    "$WORKSPACES_DIR/agipix_control"
+    "$WORKSPACES_DIR/lidar_ws"
+    "$WORKSPACES_DIR/logging"
+    "$WORKSPACES_DIR/ui"
+    "$WORKSPACES_DIR/docker/agidocker/.ide-session-data/sessions/ros2/.gemini"
+)
+
+for dir in "${MOUNTED_DIRS[@]}"; do
+    if [[ ! -d "$dir" ]]; then
+        print_info "Creating missing workspace directory: $dir"
+        mkdir -p "$dir"
+    fi
+done
+
+# Ensure single-file mounts exist so Docker does not create them as directories
+if [[ ! -f "$HOME/.profile" ]]; then
+    touch "$HOME/.profile"
+fi
+if [[ ! -f "$HOME/.Xauthority" ]]; then
+    touch "$HOME/.Xauthority"
+fi
+
 # Check if user can run docker without root.
 RE="\<docker\>"
 if [[ ! $(groups $USER) =~ $RE ]]; then
