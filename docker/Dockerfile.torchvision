@@ -8,25 +8,39 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-ENV FORCE_CUDA=1
-# COPY torchvision/build.sh /tmp/torchvision/
-# RUN cd /tmp/torchvision/  && \
-#     git clone -b v0.17.2 https://github.com/pytorch/vision.git
-ARG TORCH_CUDA_ARCH_LIST="8.7;8.9"
-# RUN cd /tmp/torchvision/vision  && \
-#     python setup.py develop
+# ENV FORCE_CUDA=1
+# # COPY torchvision/build.sh /tmp/torchvision/
+# # RUN cd /tmp/torchvision/  && \
+# #     git clone -b v0.17.2 https://github.com/pytorch/vision.git
+# ARG TORCH_CUDA_ARCH_LIST="8.7;8.9"
+# # RUN cd /tmp/torchvision/vision  && \
+# #     python setup.py develop
 
-ARG TORCHVISION_VERSION=0.25.0 \
-    FORCE_BUILD=on
+# ARG TORCHVISION_VERSION=0.25.0 \
+#     FORCE_BUILD=on
 
-COPY torchvision/build.sh torchvision/install.sh /tmp/torchvision/
+# COPY torchvision/build.sh torchvision/install.sh /tmp/torchvision/
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        libjpeg-dev \
-        libpng-dev \
-        zlib1g-dev \
-	&& rm -rf /var/lib/apt/lists/* \
-	&& apt-get clean
+# RUN apt-get update && \
+#     apt-get install -y --no-install-recommends \
+#         libjpeg-dev \
+#         libpng-dev \
+#         zlib1g-dev \
+# 	&& rm -rf /var/lib/apt/lists/* \
+# 	&& apt-get clean
 
-RUN /tmp/torchvision/install.sh || /tmp/torchvision/build.sh
+# RUN python3 -m pip install --no-cache-dir --force-reinstall "setuptools==65.7.0"
+
+# RUN /tmp/torchvision/install.sh || /tmp/torchvision/build.sh
+
+# torchvision is already installed by the architecture-specific
+# PyTorch layer. Do not rebuild it against the system CUDA toolkit.
+RUN python3 - <<'PY'
+import torch
+import torchvision
+
+print("torch:", torch.__version__)
+print("torchvision:", torchvision.__version__)
+print("torch CUDA:", torch.version.cuda)
+print("torchvision CUDA ops available:", torchvision.extension._has_ops())
+PY

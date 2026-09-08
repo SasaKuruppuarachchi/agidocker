@@ -88,16 +88,6 @@ EOF
 
 ## 4) Post setup (Optional)
 
-### Build Opencv with cuda From source
-> Note! OpenCV =< 4.8 had an incompatability with Cuda 12.x
-```bash
-agidocker
-# Inside docker
-cd /worckspaces/isaac_ros-dev/src/isaac_ros_common
-sudo ./build_ocv_cuda.sh
-# This will build and install the OCV for this running container locally 
-# but saves the build files on the mounted folder so we can use the Dockerfile.opencv layer later
-```
 
 ### Build torchvision from source (matches NVIDIA PyTorch)
 ```bash

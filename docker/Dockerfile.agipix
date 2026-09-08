@@ -65,7 +65,7 @@ RUN apt-get install -y ros-${ROS_DISTRO}-octomap-ros && rm -f /etc/apt/sources.l
 RUN apt-get update && apt-get install -y libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 libx11-xcb1 libxkbcommon-x11-0 libxcb1 libxcb-xinerama0 libavcodec-extra ros-humble-ffmpeg-image-transport ros-humble-depthai ros-humble-foxglove-msgs ros-humble-rviz-imu-plugin gedit ros-humble-rmw-cyclonedds-cpp
 RUN bash -c "$(curl -sLo- https://superfile.dev/install.sh)"
 ### !!! @TODO: Temporary fix for torchvision compatibility with torch 2.1 and cuda 12.6 ### 
-RUN pip3 uninstall -y torchvision && pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128 
+# RUN pip3 uninstall -y torchvision && pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128 
 RUN pip3 install torchrl hydra-core && apt-get install ros-humble-octomap-server ros-humble-octomap-rviz-plugins
 
 # Install dependencies, download, build, and clean up Ceres 2.0.0
