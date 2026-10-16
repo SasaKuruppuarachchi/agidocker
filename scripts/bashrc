@@ -20,9 +20,9 @@ export AEROSTACK2_WORKSPACE=/workspaces/aerostack2_ws
 export PX4_FOLDER=/workspaces/aerostack2_ws/src/thirdparty/PX4-Autopilot
 
 # Agipix control stack
-alias runagi='cd /workspaces/agipix_control/src/agipix_autonomy/tmux/ && ./start.sh -s'
-alias sorcon='source /workspaces/agipix_control/install/setup.bash'
-alias bilcon='cd /workspaces/agipix_control && colcon build --packages-skip px4_msgs'
+alias runagi='/workspaces/agipix_control/src/agipix_autonomy/tools/runagi.sh'
+alias sorcon='source /workspaces/agipix_control/src/agipix_autonomy/tools/production_environment.sh'
+alias bilcon='/workspaces/agipix_control/src/agipix_autonomy/tools/bilcon.sh'
 alias billidar='cd /workspaces/lidar_ws && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release'
 # Lidar workspace
 alias sorlidar='source /workspaces/lidar_ws/install/setup.bash'
@@ -59,7 +59,7 @@ export CUDNN_LIBRARY=/usr/lib/aarch64-linux-gnu/libcudnn.so
 
 # Environment variables
 export PATH="$HOME/.local/bin:$PATH"
-export ROS_DOMAIN_ID=3 # Agipix-hard domain sim-3
+export ROS_DOMAIN_ID=5 # Agipix-hard domain sim-3
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 #export LD_LIBRARY_PATH="/workspaces/agipix_control/src/agipix_autonomy/trajectory_planner/include/trajectory_planner/third_party/lib/x86:$LD_LIBRARY_PATH"
