@@ -6,3 +6,4 @@ get-pip.py
 #.agipix_ros_common-config
 verify_cuda_cudnn
 test_ocv_cuda
+.aws
