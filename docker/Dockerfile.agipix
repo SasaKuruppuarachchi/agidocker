@@ -68,6 +68,9 @@ RUN bash -c "$(curl -sLo- https://superfile.dev/install.sh)"
 # RUN pip3 uninstall -y torchvision && pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128 
 RUN pip3 install torchrl hydra-core && apt-get install ros-humble-octomap-server ros-humble-octomap-rviz-plugins
 
+# agiptive-liom-viz offline scan cleaner: GICP registration and pose-graph refinement (python bindings)
+RUN pip3 install small_gicp==1.0.1 gtsam==4.2
+
 # Install dependencies, download, build, and clean up Ceres 2.0.0
 RUN apt-get update && apt-get install -y \
     build-essential cmake wget libgoogle-glog-dev libgflags-dev libatlas-base-dev \
